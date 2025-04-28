@@ -72,8 +72,8 @@ def create_status_cards():
         className="mb-4"
     )
 
-# 코인 가격 차트 컴포넌트
-def create_price_charts():
+# 캔들스틱 차트와 거래량 차트 컴포넌트 (메인 차트)
+def create_main_chart():
     return dbc.Row(
         [
             dbc.Col(
@@ -82,7 +82,7 @@ def create_price_charts():
                         dbc.CardHeader(
                             dbc.Row(
                                 [
-                                    dbc.Col(html.H4("코인 가격 차트", className="card-title"), width=6),
+                                    dbc.Col(html.H4("캔들스틱 차트", className="card-title"), width=4),
                                     dbc.Col(
                                         dcc.Dropdown(
                                             id="coin-selector",
@@ -96,25 +96,53 @@ def create_price_charts():
                                             value="BTC",
                                             clearable=False
                                         ),
-                                        width=4
+                                        width=3
                                     ),
                                     dbc.Col(
-                                        dbc.Checklist(
+                                        dbc.Select(
+                                            id="candle-interval",
                                             options=[
-                                                {"label": "볼린저 밴드 표시", "value": "on"}
+                                                {"label": "일봉 (1d)", "value": "1d"},
+                                                {"label": "4시간봉 (4h)", "value": "4h"},
+                                                {"label": "1시간봉 (1h)", "value": "1h"},
+                                                {"label": "30분봉 (30m)", "value": "30m"},
+                                                {"label": "15분봉 (15m)", "value": "15m"},
+                                                {"label": "5분봉 (5m)", "value": "5m"},
+                                                {"label": "3분봉 (3m)", "value": "3m"},
+                                                {"label": "1분봉 (1m)", "value": "1m"},
                                             ],
-                                            value=[],
-                                            id="bollinger-toggle",
-                                            switch=True,
+                                            value="1h",
+                                            className="form-select-sm"
                                         ),
-                                        width=2
+                                        width=3
+                                    ),
+                                    dbc.Col(
+                                        html.Div([
+                                            dbc.Checklist(
+                                                options=[
+                                                    {"label": "볼린저 밴드", "value": "bollinger"},
+                                                    {"label": "이동평균선", "value": "ma"},
+                                                    {"label": "RSI", "value": "rsi"},
+                                                    {"label": "MACD", "value": "macd"}
+                                                ],
+                                                value=[],
+                                                id="indicator-toggles",
+                                                inline=True,
+                                                switch=True,
+                                                className="mt-1"
+                                            )
+                                        ]),
+                                        width=4
                                     )
                                 ]
                             )
                         ),
                         dbc.CardBody(
                             [
-                                dcc.Graph(id="price-chart", style={"height": "500px"})
+                                # 캔들스틱 차트
+                                dcc.Graph(id="candle-chart", style={"height": "500px"}),
+                                # 거래량 차트 (같은 시간축 공유)
+                                dcc.Graph(id="volume-chart", style={"height": "200px"})
                             ]
                         )
                     ],
@@ -126,38 +154,47 @@ def create_price_charts():
         className="mb-4"
     )
 
-# 거래량 차트 컴포넌트
-def create_volume_charts():
+# 가격 차트 컴포넌트 (라인 차트)
+def create_price_charts():
     return dbc.Row(
         [
             dbc.Col(
                 dbc.Card(
                     [
-                        dbc.CardHeader(html.H4("Binance 거래량 차트", className="card-title")),
+                        dbc.CardHeader(
+                            dbc.Row(
+                                [
+                                    dbc.Col(html.H4("코인 가격 차트", className="card-title"), width=4),
+                                    dbc.Col(
+                                        dbc.Select(
+                                            id="price-interval",
+                                            options=[
+                                                {"label": "1일 (1d)", "value": "1d"},
+                                                {"label": "4시간 (4h)", "value": "4h"},
+                                                {"label": "1시간 (1h)", "value": "1h"},
+                                                {"label": "30분 (30m)", "value": "30m"},
+                                                {"label": "15분 (15m)", "value": "15m"},
+                                                {"label": "5분 (5m)", "value": "5m"},
+                                                {"label": "3분 (3m)", "value": "3m"},
+                                                {"label": "1분 (1m)", "value": "1m"},
+                                            ],
+                                            value="1h",
+                                            className="form-select-sm"
+                                        ),
+                                        width=3
+                                    )
+                                ]
+                            )
+                        ),
                         dbc.CardBody(
                             [
-                                dcc.Graph(id="volume-chart", style={"height": "300px"})
+                                dcc.Graph(id="price-chart", style={"height": "300px"})
                             ]
                         )
                     ],
                     className="mb-4 shadow-sm"
                 ),
-                md=6
-            ),
-            
-            dbc.Col(
-                dbc.Card(
-                    [
-                        dbc.CardHeader(html.H4("캔들스틱 차트", className="card-title")),
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(id="candle-chart", style={"height": "300px"})
-                            ]
-                        )
-                    ],
-                    className="mb-4 shadow-sm"
-                ),
-                md=6
+                md=12
             )
         ],
         className="mb-4"
@@ -207,14 +244,21 @@ def create_collection_stats():
         className="mb-4"
     )
 
+# 캔들스틱 차트 컴포넌트 (테스트 호환성 유지용)
+def create_candlestick_chart():
+    """
+    테스트 호환성을 위해 유지되는 함수.
+    실제로는 create_main_chart를 사용하세요.
+    """
+    return create_main_chart()
+
 # 전체 대시보드 레이아웃 생성
 def create_layout():
     return dbc.Container(
         [
             create_header(),
             create_status_cards(),
-            create_price_charts(),
-            create_volume_charts(),
+            create_main_chart(),  # 새로운 메인 차트 (캔들스틱 + 거래량)
             create_news_table(),
             create_collection_stats(),
             
@@ -231,6 +275,7 @@ def create_layout():
         fluid=True,
         className="p-4"
     )
+
 
 
 

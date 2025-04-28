@@ -47,126 +47,53 @@ def register_status_callbacks(app, data_cache):
             news_status_text, news_last_update, news_count
         )
 
-# 가격 차트 업데이트 콜백
-def register_price_chart_callback(app, data_cache):
+# 거래량 차트 업데이트 콜백
+def register_volume_chart_callback(app, data_cache):
     @app.callback(
-        Output("price-chart", "figure"),
+        Output("volume-chart", "figure"),
         [Input("interval-component", "n_intervals"),
          Input("coin-selector", "value"),
-         Input("bollinger-toggle", "value")]
+         Input("candle-interval", "value")]
     )
-    def update_price_chart(n, selected_coin, show_bollinger):
+    def update_volume_chart(n, selected_coin, interval):
         # 선택된 코인에 해당하는 심볼 찾기
         binance_symbol = f"{selected_coin}USDT"
         
         # 빈 차트 초기화
         fig = go.Figure()
         
-        # 데이터 존재 여부 플래그
-        has_data = False
-        
-        # 웹소켓 데이터 확인
-        if binance_symbol in data_cache["websocket_data"] and data_cache["websocket_data"][binance_symbol]:
-            # 웹소켓 데이터를 DataFrame으로 변환
-            ws_data = data_cache["websocket_data"][binance_symbol]
-            df_ws = pd.DataFrame(ws_data)
+        # 캔들스틱 데이터 가져오기
+        if "candle_data" in data_cache and binance_symbol in data_cache["candle_data"]:
+            # 새로운 구조: 심볼 -> 간격 -> 데이터
+            symbol_candles = data_cache["candle_data"][binance_symbol]
             
-            if not df_ws.empty:
-                has_data = True
-                # 실시간 데이터 추가
-                fig.add_trace(go.Scatter(
-                    x=df_ws["timestamp"],
-                    y=df_ws["price"],
-                    mode="lines",
-                    name=f"Binance {selected_coin}/USDT (실시간)",
-                    line=dict(color="#F0B90B", width=2)
-                ))
+            # 선택된 간격의 데이터가 있는지 확인
+            if interval in symbol_candles and not symbol_candles[interval].empty:
+                df_candles = symbol_candles[interval]
                 
-                # 볼린저 밴드 계산 및 추가
-                if show_bollinger and "on" in show_bollinger and len(df_ws) > 20:
-                    from visualization.dashboard import calculate_bollinger_bands
-                    df_bb = calculate_bollinger_bands(df_ws.copy())
-                    
-                    # 중간 밴드 (20일 이동평균)
-                    fig.add_trace(go.Scatter(
-                        x=df_bb["timestamp"],
-                        y=df_bb["middle_band"],
-                        mode="lines",
-                        name="중간 밴드 (20일 MA)",
-                        line=dict(color="rgba(0, 0, 255, 0.5)", width=1)
-                    ))
-                    
-                    # 상단 밴드
-                    fig.add_trace(go.Scatter(
-                        x=df_bb["timestamp"],
-                        y=df_bb["upper_band"],
-                        mode="lines",
-                        name="상단 밴드",
-                        line=dict(color="rgba(0, 255, 0, 0.5)", width=1)
-                    ))
-                    
-                    # 하단 밴드
-                    fig.add_trace(go.Scatter(
-                        x=df_bb["timestamp"],
-                        y=df_bb["lower_band"],
-                        mode="lines",
-                        name="하단 밴드",
-                        line=dict(color="rgba(255, 0, 0, 0.5)", width=1),
-                        fill='tonexty',
-                        fillcolor='rgba(200, 200, 255, 0.2)'
-                    ))
-        
-        # 기존 데이터베이스 데이터 추가
-        if not has_data and "coin_data" in data_cache and binance_symbol in data_cache["coin_data"]:
-            df_binance = data_cache["coin_data"][binance_symbol]
-            if not df_binance.empty:
-                has_data = True
-                fig.add_trace(go.Scatter(
-                    x=df_binance["timestamp"],
-                    y=df_binance["price"],
-                    mode="lines",
-                    name=f"Binance {selected_coin}/USDT",
-                    line=dict(color="#F0B90B", width=2)
+                # 거래량 바 차트 추가
+                fig.add_trace(go.Bar(
+                    x=df_candles["timestamp"],
+                    y=df_candles["volume"],
+                    name="거래량",
+                    marker=dict(
+                        color='rgba(58, 71, 80, 0.6)',
+                        line=dict(color='rgba(58, 71, 80, 1.0)', width=1)
+                    )
                 ))
-                
-                # 볼린저 밴드 계산 및 추가
-                if show_bollinger and "on" in show_bollinger and len(df_binance) > 20:
-                    from visualization.dashboard import calculate_bollinger_bands
-                    df_bb = calculate_bollinger_bands(df_binance.copy())
-                    
-                    # 중간 밴드 (20일 이동평균)
-                    fig.add_trace(go.Scatter(
-                        x=df_bb["timestamp"],
-                        y=df_bb["middle_band"],
-                        mode="lines",
-                        name="중간 밴드 (20일 MA)",
-                        line=dict(color="rgba(0, 0, 255, 0.5)", width=1)
-                    ))
-                    
-                    # 상단 밴드
-                    fig.add_trace(go.Scatter(
-                        x=df_bb["timestamp"],
-                        y=df_bb["upper_band"],
-                        mode="lines",
-                        name="상단 밴드",
-                        line=dict(color="rgba(0, 255, 0, 0.5)", width=1)
-                    ))
-                    
-                    # 하단 밴드
-                    fig.add_trace(go.Scatter(
-                        x=df_bb["timestamp"],
-                        y=df_bb["lower_band"],
-                        mode="lines",
-                        name="하단 밴드",
-                        line=dict(color="rgba(255, 0, 0, 0.5)", width=1),
-                        fill='tonexty',
-                        fillcolor='rgba(200, 200, 255, 0.2)'
-                    ))
-        
-        # 데이터가 없는 경우 메시지 표시
-        if not has_data:
+            else:
+                # 선택된 간격의 데이터가 없는 경우
+                fig.add_annotation(
+                    text=f"{selected_coin}에 대한 {interval} 거래량 데이터가 없습니다",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5,
+                    showarrow=False,
+                    font=dict(size=20)
+                )
+        else:
+            # 데이터가 없는 경우 빈 차트 표시
             fig.add_annotation(
-                text="가격 데이터가 없습니다",
+                text=f"{selected_coin}에 대한 거래량 데이터가 없습니다",
                 xref="paper", yref="paper",
                 x=0.5, y=0.5,
                 showarrow=False,
@@ -175,58 +102,29 @@ def register_price_chart_callback(app, data_cache):
         
         # 차트 레이아웃 설정
         fig.update_layout(
-            title=f"{selected_coin} 가격 추이 (24시간)",
+            title=f"{selected_coin}/USDT {interval} 거래량",
             xaxis_title="시간",
-            yaxis_title="가격 (USD)",
-            template="plotly_white",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            margin=dict(l=40, r=40, t=60, b=40),
-            height=500  # 차트 높이 증가
-        )
-        
-        # X축 범위 설정 (최근 24시간)
-        fig.update_xaxes(
-            range=[datetime.now() - timedelta(hours=24), datetime.now()],
-            rangeslider_visible=False
-        )
-        
-        return fig
-
-# 거래량 차트 업데이트 콜백
-def register_volume_chart_callback(app, data_cache):
-    @app.callback(
-        Output("volume-chart", "figure"),
-        [Input("interval-component", "n_intervals"),
-         Input("coin-selector", "value")]
-    )
-    def update_volume_chart(n, selected_coin):
-        # 선택된 코인에 해당하는 심볼 찾기
-        binance_symbol = f"{selected_coin}USDT"
-        
-        # Binance 거래량 데이터 준비
-        volume = 0
-        
-        # Binance 거래량 합산
-        if binance_symbol in data_cache["coin_data"]:
-            df_binance = data_cache["coin_data"][binance_symbol]
-            if not df_binance.empty:
-                volume = df_binance["volume"].sum()
-        
-        # 바 차트 생성
-        fig = px.bar(
-            x=["Binance"],
-            y=[volume],
-            color=["Binance"],
-            color_discrete_map={"Binance": "#F0B90B"},
-            labels={"x": "거래소", "y": "24시간 거래량"}
-        )
-        
-        # 차트 레이아웃 설정
-        fig.update_layout(
-            title=f"{selected_coin} 거래량",
+            yaxis_title="거래량",
             template="plotly_white",
             showlegend=False,
-            margin=dict(l=40, r=40, t=60, b=40)
+            margin=dict(l=40, r=40, t=40, b=40),
+            xaxis=dict(
+                type="date",
+                rangeslider=dict(visible=False)
+            )
+        )
+        
+        # 차트 스타일 개선
+        fig.update_xaxes(
+            gridcolor='rgba(200, 200, 200, 0.2)',
+            showgrid=True,
+            zeroline=False
+        )
+        
+        fig.update_yaxes(
+            gridcolor='rgba(200, 200, 200, 0.2)',
+            showgrid=True,
+            zeroline=False
         )
         
         return fig
@@ -236,50 +134,173 @@ def register_candle_chart_callback(app, data_cache):
     @app.callback(
         Output("candle-chart", "figure"),
         [Input("interval-component", "n_intervals"),
-         Input("coin-selector", "value")]
+         Input("coin-selector", "value"),
+         Input("candle-interval", "value"),
+         Input("indicator-toggles", "value")]
     )
-    def update_candle_chart(n, selected_coin):
+    def update_candle_chart(n, selected_coin, interval, indicators):
         # 선택된 코인에 해당하는 심볼 찾기
         binance_symbol = f"{selected_coin}USDT"
         
         # 빈 차트 초기화
         fig = go.Figure()
         
-        # 캔들스틱 데이터 가져오기 (예시 데이터)
-        # 실제로는 데이터베이스에서 캔들스틱 데이터를 가져와야 함
+        # 캔들스틱 데이터 가져오기
         if "candle_data" in data_cache and binance_symbol in data_cache["candle_data"]:
-            df_candles = data_cache["candle_data"][binance_symbol]
+            # 새로운 구조: 심볼 -> 간격 -> 데이터
+            symbol_candles = data_cache["candle_data"][binance_symbol]
             
-            fig.add_trace(go.Candlestick(
-                x=df_candles["timestamp"],
-                open=df_candles["open"],
-                high=df_candles["high"],
-                low=df_candles["low"],
-                close=df_candles["close"],
-                name=f"{selected_coin} 캔들"
-            ))
+            # 선택된 간격의 데이터가 있는지 확인
+            if interval in symbol_candles and not symbol_candles[interval].empty:
+                df_candles = symbol_candles[interval]
+                
+                # 캔들스틱 차트 추가
+                fig.add_trace(go.Candlestick(
+                    x=df_candles["timestamp"],
+                    open=df_candles["open"],
+                    high=df_candles["high"],
+                    low=df_candles["low"],
+                    close=df_candles["close"],
+                    name=f"{selected_coin}/USDT"
+                ))
+                
+                # 볼린저 밴드 추가 (선택된 경우)
+                if "bollinger" in indicators:
+                    from visualization.dashboard import calculate_bollinger_bands
+                    
+                    # 볼린저 밴드 계산 (20일 이동평균, 2 표준편차)
+                    df_with_bands = calculate_bollinger_bands(df_candles, window=20, num_std=2.0)
+                    
+                    # 중간 밴드 (20일 이동평균)
+                    fig.add_trace(go.Scatter(
+                        x=df_with_bands["timestamp"],
+                        y=df_with_bands["middle_band"],
+                        line=dict(color='rgba(255, 207, 0, 0.7)', width=1),
+                        name="MA(20)"
+                    ))
+                    
+                    # 상단 밴드
+                    fig.add_trace(go.Scatter(
+                        x=df_with_bands["timestamp"],
+                        y=df_with_bands["upper_band"],
+                        line=dict(color='rgba(0, 128, 255, 0.7)', width=1),
+                        name="Upper Band"
+                    ))
+                    
+                    # 하단 밴드
+                    fig.add_trace(go.Scatter(
+                        x=df_with_bands["timestamp"],
+                        y=df_with_bands["lower_band"],
+                        line=dict(color='rgba(0, 128, 255, 0.7)', width=1),
+                        name="Lower Band",
+                        fill='tonexty',
+                        fillcolor='rgba(0, 128, 255, 0.05)'
+                    ))
+                
+                # 이동평균선 추가 (선택된 경우)
+                if "ma" in indicators:
+                    # 7일 이동평균
+                    ma7 = df_candles["close"].rolling(window=7).mean()
+                    fig.add_trace(go.Scatter(
+                        x=df_candles["timestamp"],
+                        y=ma7,
+                        line=dict(color='rgba(255, 0, 0, 0.7)', width=1),
+                        name="MA(7)"
+                    ))
+                    
+                    # 25일 이동평균
+                    ma25 = df_candles["close"].rolling(window=25).mean()
+                    fig.add_trace(go.Scatter(
+                        x=df_candles["timestamp"],
+                        y=ma25,
+                        line=dict(color='rgba(0, 255, 0, 0.7)', width=1),
+                        name="MA(25)"
+                    ))
+                    
+                    # 99일 이동평균
+                    ma99 = df_candles["close"].rolling(window=99).mean()
+                    fig.add_trace(go.Scatter(
+                        x=df_candles["timestamp"],
+                        y=ma99,
+                        line=dict(color='rgba(128, 0, 128, 0.7)', width=1),
+                        name="MA(99)"
+                    ))
+            else:
+                # 선택된 간격의 데이터가 없는 경우
+                fig.add_annotation(
+                    text=f"{selected_coin}에 대한 {interval} 캔들 데이터가 없습니다",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5,
+                    showarrow=False,
+                    font=dict(size=20)
+                )
         else:
             # 데이터가 없는 경우 빈 차트 표시
             fig.add_annotation(
-                text="캔들스틱 데이터가 없습니다",
+                text=f"{selected_coin}에 대한 캔들 데이터가 없습니다",
                 xref="paper", yref="paper",
                 x=0.5, y=0.5,
                 showarrow=False,
                 font=dict(size=20)
             )
         
+        # 시간 범위 설정
+        time_range = None
+        if interval == "1m":
+            time_range = [datetime.now() - timedelta(hours=12), datetime.now()]
+        elif interval == "3m":
+            time_range = [datetime.now() - timedelta(hours=18), datetime.now()]
+        elif interval == "5m":
+            time_range = [datetime.now() - timedelta(days=1), datetime.now()]
+        elif interval == "15m":
+            time_range = [datetime.now() - timedelta(days=3), datetime.now()]
+        elif interval == "30m":
+            time_range = [datetime.now() - timedelta(days=5), datetime.now()]
+        elif interval == "1h":
+            time_range = [datetime.now() - timedelta(days=10), datetime.now()]
+        elif interval == "4h":
+            time_range = [datetime.now() - timedelta(days=20), datetime.now()]
+        elif interval == "1d":
+            time_range = [datetime.now() - timedelta(days=60), datetime.now()]
+        
         # 차트 레이아웃 설정
         fig.update_layout(
-            title=f"{selected_coin} 캔들스틱 차트",
+            title=f"{selected_coin}/USDT {interval} 캔들스틱 차트",
             xaxis_title="시간",
-            yaxis_title="가격 (USD)",
+            yaxis_title="가격 (USDT)",
             template="plotly_white",
-            xaxis_rangeslider_visible=False,
-            margin=dict(l=40, r=40, t=60, b=40)
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            margin=dict(l=40, r=40, t=80, b=40),
+            xaxis=dict(
+                rangeslider=dict(visible=False),  # 하단 슬라이더 비활성화
+                type="date"
+            )
+        )
+        
+        # 시간 범위 설정 (있는 경우)
+        if time_range:
+            fig.update_xaxes(range=time_range)
+        
+        # 차트 스타일 개선
+        fig.update_xaxes(
+            gridcolor='rgba(200, 200, 200, 0.2)',
+            showgrid=True,
+            zeroline=False
+        )
+        
+        fig.update_yaxes(
+            gridcolor='rgba(200, 200, 200, 0.2)',
+            showgrid=True,
+            zeroline=False
         )
         
         return fig
-
 # 뉴스 테이블 업데이트 콜백
 def register_news_table_callback(app, data_cache):
     @app.callback(
@@ -442,7 +463,6 @@ def register_collection_stats_callback(app, data_cache):
 # 모든 콜백 등록
 def register_all_callbacks(app, data_cache):
     register_status_callbacks(app, data_cache)
-    register_price_chart_callback(app, data_cache)
     register_volume_chart_callback(app, data_cache)
     register_candle_chart_callback(app, data_cache)
     register_news_table_callback(app, data_cache)

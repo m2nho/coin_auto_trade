@@ -60,24 +60,40 @@ class BinanceDataCollector:
         """
         results = []
         
+        # 수집할 캔들 간격 목록
+        intervals = ["1m", "30m", "1h", "4h", "1d"]
+        
         for symbol in self.symbols:
             try:
                 # 티커 데이터 수집
                 ticker_data = self.get_ticker_data(symbol)
                 
-                # 캔들스틱 데이터 수집
-                candle_data = self.get_candle_data(symbol)
+                # 각 간격별 캔들스틱 데이터 수집
+                candles_by_interval = {}
+                for interval in intervals:
+                    # 간격에 따라 적절한 데이터 수 조정
+                    limit = 100
+                    if interval == "1h":
+                        limit = 100
+                    elif interval == "4h":
+                        limit = 100
+                    elif interval == "1d":
+                        limit = 30  # 30일치 데이터
+                    
+                    candle_data = self.get_candle_data(symbol, interval=interval, limit=limit)
+                    candles_by_interval[interval] = candle_data
+                    logger.debug(f"{symbol} {interval} 캔들 데이터 {len(candle_data)}개 수집 완료")
                 
                 # 데이터 통합
                 combined_data = {
                     "symbol": symbol,
                     "timestamp": datetime.now().timestamp(),
                     "ticker": ticker_data,
-                    "candles": candle_data
+                    "candles": candles_by_interval
                 }
                 
                 results.append(combined_data)
-                logger.debug(f"{symbol} 데이터 수집 완료")
+                logger.info(f"{symbol} 데이터 수집 완료")
                 
             except Exception as e:
                 logger.error(f"{symbol} 데이터 수집 중 오류 발생: {e}")
@@ -204,7 +220,8 @@ class BinanceDataCollector:
             bm = BinanceSocketManager(self.client)
             
             # 심볼에 대한 실시간 가격 스트림 시작
-            conn_key = bm.symbol_ticker_socket(symbol, callback)
+            # 최신 버전의 python-binance 라이브러리에서는 start_symbol_ticker_socket 메서드를 사용
+            conn_key = bm.start_symbol_ticker_socket(symbol, callback)
             
             # 웹소켓 시작
             bm.start()
@@ -236,7 +253,8 @@ class BinanceDataCollector:
             
             # 각 심볼에 대한 실시간 가격 스트림 시작
             for symbol in symbols:
-                conn_key = bm.symbol_ticker_socket(symbol, callback)
+                # 최신 버전의 python-binance 라이브러리에서는 start_symbol_ticker_socket 메서드를 사용
+                conn_key = bm.start_symbol_ticker_socket(symbol, callback)
                 connections[symbol] = conn_key
             
             # 웹소켓 시작
@@ -276,5 +294,12 @@ class BinanceDataCollector:
         except Exception as e:
             logger.error(f"모든 웹소켓 스트림 중지 실패: {e}")
             raise
+
+
+
+
+
+
+
 
 

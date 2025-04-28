@@ -105,26 +105,50 @@ class DatabaseManager:
                     )
                     session.add(coin_data)
                 
-                # 캔들 데이터 저장 (Binance 형식)
-                candles = data.get("candles", [])
-                for candle in candles:
-                    candle_data = CandleData(
-                        symbol=data["symbol"],
-                        interval="1m",  # Binance 기본 간격
-                        open_time=datetime.fromtimestamp(candle["open_time"] / 1000),  # 밀리초를 초로 변환
-                        open=candle["open"],
-                        high=candle["high"],
-                        low=candle["low"],
-                        close=candle["close"],
-                        volume=candle["volume"],
-                        close_time=datetime.fromtimestamp(candle["close_time"] / 1000),  # 밀리초를 초로 변환
-                        quote_volume=candle.get("quote_volume"),
-                        trades=candle.get("trades"),
-                        taker_buy_base_volume=candle.get("taker_buy_base_volume"),
-                        taker_buy_quote_volume=candle.get("taker_buy_quote_volume"),
-                        value=None  # Binance API에서는 제공하지 않음
-                    )
-                    session.add(candle_data)
+                # 캔들 데이터 저장
+                candles = data.get("candles", {})
+                
+                # 새로운 형식: 간격별로 캔들 데이터가 저장됨
+                if isinstance(candles, dict):
+                    for interval, interval_candles in candles.items():
+                        for candle in interval_candles:
+                            candle_data = CandleData(
+                                symbol=data["symbol"],
+                                interval=interval,
+                                open_time=datetime.fromtimestamp(candle["open_time"] / 1000),  # 밀리초를 초로 변환
+                                open=candle["open"],
+                                high=candle["high"],
+                                low=candle["low"],
+                                close=candle["close"],
+                                volume=candle["volume"],
+                                close_time=datetime.fromtimestamp(candle["close_time"] / 1000),  # 밀리초를 초로 변환
+                                quote_volume=candle.get("quote_volume"),
+                                trades=candle.get("trades"),
+                                taker_buy_base_volume=candle.get("taker_buy_base_volume"),
+                                taker_buy_quote_volume=candle.get("taker_buy_quote_volume"),
+                                value=None  # Binance API에서는 제공하지 않음
+                            )
+                            session.add(candle_data)
+                # 이전 형식 지원 (하위 호환성)
+                elif isinstance(candles, list):
+                    for candle in candles:
+                        candle_data = CandleData(
+                            symbol=data["symbol"],
+                            interval="1m",  # 기본 간격
+                            open_time=datetime.fromtimestamp(candle["open_time"] / 1000),  # 밀리초를 초로 변환
+                            open=candle["open"],
+                            high=candle["high"],
+                            low=candle["low"],
+                            close=candle["close"],
+                            volume=candle["volume"],
+                            close_time=datetime.fromtimestamp(candle["close_time"] / 1000),  # 밀리초를 초로 변환
+                            quote_volume=candle.get("quote_volume"),
+                            trades=candle.get("trades"),
+                            taker_buy_base_volume=candle.get("taker_buy_base_volume"),
+                            taker_buy_quote_volume=candle.get("taker_buy_quote_volume"),
+                            value=None  # Binance API에서는 제공하지 않음
+                        )
+                        session.add(candle_data)
             
             session.commit()
             logger.debug(f"{len(data_list)} 개의 코인 데이터 저장 완료")
@@ -369,6 +393,7 @@ class DatabaseManager:
         if self.session_factory:
             self.session_factory.remove()
             logger.info("데이터베이스 연결 닫힘")
+
 
 
 
