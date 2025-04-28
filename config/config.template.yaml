@@ -1,0 +1,84 @@
+# 비트코인 자동 거래 프로그램 설정 파일 템플릿
+# 실제 사용 시 이 파일을 config.yaml로 복사하고 민감한 정보를 입력하세요.
+
+# Binance API 설정
+binance:
+  api_key: "YOUR_BINANCE_API_KEY"
+  api_secret: "YOUR_BINANCE_API_SECRET"
+  symbols:
+    - "BTCUSDT"
+    - "ETHUSDT"
+    - "BNBUSDT"
+    - "ADAUSDT"
+    - "DOGEUSDT"
+  interval: "1m"  # 1분 간격 데이터
+  limit: 100      # 한 번에 가져올 캔들 수
+
+# Upbit API 설정
+upbit:
+  symbols:
+    - "KRW-BTC"
+    - "KRW-ETH"
+    - "KRW-XRP"
+    - "KRW-ADA"
+    - "KRW-DOGE"
+  daily_candle_count: 30  # 일봉 데이터 개수
+  minute30_candle_count: 48  # 30분봉 데이터 개수 (24시간)
+
+# CryptoPanic API 설정
+cryptopanic:
+  api_key: "YOUR_CRYPTOPANIC_API_KEY"
+  currencies:
+    - "BTC"
+    - "ETH"
+    - "BNB"
+    - "ADA"
+    - "DOGE"
+  posts_per_page: 50
+  filter: "hot"   # 인기 뉴스 필터링
+  public: true    # 공개 뉴스만 가져오기
+
+# 데이터베이스 설정
+database:
+  path: "bitcoin_trading.db"  # SQLite 데이터베이스 파일 경로
+  echo: false                 # SQL 쿼리 로깅 여부
+  backup_interval: 86400      # 백업 간격 (초)
+  backup_path: "backups/"     # 백업 파일 저장 경로
+
+# 지식 베이스 설정
+knowledge_base:
+  update_interval: 3600       # 지식 베이스 업데이트 간격 (초)
+  features:
+    - "price_change_24h"      # 24시간 가격 변동
+    - "volume_change_24h"     # 24시간 거래량 변동
+    - "news_sentiment"        # 뉴스 감성 점수
+    - "market_dominance"      # 시장 지배력
+  models:
+    - name: "price_prediction"
+      type: "linear_regression"
+      target: "price_1h_future"
+      features:
+        - "price_change_24h"
+        - "volume_change_24h"
+        - "news_sentiment"
+    - name: "trend_detection"
+      type: "random_forest"
+      target: "trend_direction"
+      features:
+        - "price_change_24h"
+        - "volume_change_24h"
+        - "news_sentiment"
+        - "market_dominance"
+
+# 데이터 수집 설정
+collection:
+  interval: 60               # 데이터 수집 간격 (초)
+  retry_interval: 10         # 오류 발생 시 재시도 간격 (초)
+  max_retries: 3             # 최대 재시도 횟수
+
+# 로깅 설정
+logging:
+  level: "INFO"              # 로그 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  file: "bitcoin_trading.log" # 로그 파일 경로
+  max_size: 10485760         # 최대 로그 파일 크기 (10MB)
+  backup_count: 5            # 보관할 로그 파일 수

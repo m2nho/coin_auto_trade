@@ -1,0 +1,88 @@
+# Python 관련 파일
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 가상 환경
+venv/
+ENV/
+.env
+.venv
+env/
+env.bak/
+venv.bak/
+
+# 데이터베이스 파일
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# 로그 파일
+*.log
+logs/
+bitcoin_trading.log
+
+# 설정 파일 (민감한 정보 포함)
+config/config.yaml
+config/config_updated.yaml
+.env
+.aws/
+.aws/credentials
+.aws/config
+aws_credentials.json
+
+# IDE 관련 파일
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.project
+.pydevproject
+.settings/
+
+# 테스트 관련 파일
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# 임시 파일
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+
+# 개인 설정 파일
+.personal/
+credentials.json
+secrets.yaml
+token.json
+
+# 기타 민감한 데이터 파일
+*.pem
+*.key
+*.crt
+*.p12
